@@ -74,7 +74,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   return (
     <div className="game-board bg-gray-900 p-2 rounded-lg shadow-2xl">
       {/* 遊戲板網格容器 */}
-      <div className="grid grid-cols-10 gap-[1px] bg-gray-700 p-1">
+      <div className="grid grid-cols-10 gap-[5px] bg-gray-700 p-1 w-[400px]">
         {/* 渲染每個格子 */}
         {displayBoard.map((row, y) => (
           row.map((cell, x) => {
