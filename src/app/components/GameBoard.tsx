@@ -43,7 +43,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             boardX < displayBoard[0].length &&
             !displayBoard[boardY][boardX]  // 只在空格顯示幽靈方塊
           ) {
-            displayBoard[boardY][boardX] = 'ghost' as any;  // 特殊標記
+            displayBoard[boardY][boardX] = 'ghost' as TetrominoType;  // 特殊標記
           }
         }
       });
@@ -79,7 +79,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         {displayBoard.map((row, y) => (
           row.map((cell, x) => {
             // 判斷是否為幽靈方塊
-            const isGhost = cell === 'ghost';
+            const isGhost = (cell as string) === 'ghost';
             
             // 根據格子內容決定樣式
             const cellClass = isGhost 

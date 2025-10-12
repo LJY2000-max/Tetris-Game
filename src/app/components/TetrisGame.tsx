@@ -16,7 +16,7 @@ import { useTetris } from '../hooks/useTetris';
  */
 const TetrisGame: React.FC = () => {
   // 從自定義Hook獲取遊戲狀態和控制函數
-  const { gameState, startGame, pauseGame, movePiece, rotate, hardDrop } = useTetris();
+  const { gameState, startGame, pauseGame, movePiece, left_rotate, right_rotate, hardDrop } = useTetris();
 
   /**
    * 處理鍵盤輸入
@@ -45,8 +45,14 @@ const TetrisGame: React.FC = () => {
       case 'ArrowDown':      // 下箭頭：軟降（加速下降）
         movePiece('down');
         break;
-      case 'ArrowUp':        // 上箭頭：旋轉方塊
-        rotate();
+      case 'ArrowUp':        // 上箭頭：左旋
+        right_rotate();
+        break;
+      case 'x':              // x-key 左旋
+        right_rotate();
+        break;
+      case 'z':              // z-key 右旋
+        left_rotate();
         break;
       case ' ':              // 空白鍵：硬降（立即落下）
         hardDrop();
@@ -55,7 +61,7 @@ const TetrisGame: React.FC = () => {
         pauseGame();
         break;
     }
-  }, [gameState, movePiece, rotate, hardDrop, pauseGame]);
+  }, [gameState, movePiece, left_rotate, right_rotate, hardDrop, pauseGame]);
 
   /**
    * 設置鍵盤事件監聽器

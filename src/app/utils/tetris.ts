@@ -7,7 +7,9 @@ import {
   TETROMINOS,
   BOARD_WIDTH,
   BOARD_HEIGHT,
-  POINTS
+  TETROMINO_SHAPES,
+  CLEAR_POINTS,
+  COMBO_POINTS
 } from '../types/tetris';
 
 /**
@@ -21,12 +23,70 @@ export const createEmptyBoard = (): (TetrominoType | null)[][] => {
 };
 
 /**
- * 隨機選擇一種俄羅斯方塊類型
- * @returns 隨機的方塊類型（I, O, T, S, Z, J, L其中之一）
+ * 7-bag 隨機系統：每 7 個方塊為一包，確保每包都包含所有 7 種方塊各一次
+ */
+class TetrominoBag {
+  private bag: TetrominoType[] = [];
+  
+  /**
+   * 洗牌演算法（Fisher-Yates Shuffle）
+   */
+  private shuffle(array: TetrominoType[]): TetrominoType[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+  
+  /**
+   * 生成新的一包方塊（包含所有 7 種類型，順序隨機）
+   */
+  private generateNewBag(): void {
+    const types: TetrominoType[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+    this.bag = this.shuffle(types);
+  }
+  
+  /**
+   * 取得下一個方塊類型
+   */
+  public next(): TetrominoType {
+    // 如果包空了，生成新的一包
+    console.log("bag.length:",this.bag.length);
+    if (this.bag.length === 0) {
+      this.generateNewBag();
+    }
+    
+    // 從包中取出一個方塊（從後面取，效能較好）
+    return this.bag.pop()!;
+  }
+
+  /**
+   * 🔴 新增：重置方塊包
+   * 清空當前的包，下次呼叫 next() 時會生成新的一包
+   */
+  public reset(): void {
+    this.bag = [];
+  }
+}
+
+// 建立全域的方塊包實例
+const tetrominoBag = new TetrominoBag();
+
+/**
+ * 隨機選擇一種俄羅斯方塊類型（使用 7-bag 系統）
+ * @returns 下一個方塊類型（確保每 7 個方塊都不重複）
  */
 export const randomTetrominoType = (): TetrominoType => {
-  const types: TetrominoType[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
-  return types[Math.floor(Math.random() * types.length)];
+  return tetrominoBag.next();
+};
+
+/**
+ * 🔴 新增：重置方塊包（遊戲開始或結束時呼叫）
+ */
+export const resetTetrominoBag = (): void => {
+  tetrominoBag.reset();
 };
 
 /**
@@ -35,29 +95,55 @@ export const randomTetrominoType = (): TetrominoType => {
  * @returns 包含類型、初始位置和形狀的俄羅斯方塊物件
  */
 export const createTetromino = (type: TetrominoType): Tetromino => {
+  const shape = TETROMINO_SHAPES[type][0]; // 🔴 使用第 0 個旋轉狀態
   return {
     type,
+    shape,
     // 將方塊置中於頂部
     position: {
       x: Math.floor(BOARD_WIDTH / 2) - Math.floor(TETROMINOS[type][0].length / 2),
       y: 0
     },
-    shape: TETROMINOS[type]
+    rotation: 0
   };
 };
 
 /**
- * 將方塊順時針旋轉90度
- * 旋轉算法：將矩陣轉置後，每一行反轉
+ * 逆時針旋轉方塊（左旋轉）
  * @param piece - 要旋轉的方塊
  * @returns 旋轉後的新方塊物件
  */
-export const rotatePiece = (piece: Tetromino): Tetromino => {
-  // 矩陣旋轉：先轉置（行列互換），再將每行反轉
-  const rotated = piece.shape[0].map((_, index) =>
-    piece.shape.map(row => row[index]).reverse()
-  );
-  return { ...piece, shape: rotated };
+export const left_rotatePiece = (piece: Tetromino): Tetromino => {
+  // 計算上一個旋轉狀態（0 → 3 → 2 → 1 → 0）
+  const nextRotation = (piece.rotation - 1 + 4) % 4;
+  
+  // 從預定義的形狀中取得旋轉後的形狀
+  const rotatedShape = TETROMINO_SHAPES[piece.type][nextRotation];
+  
+  return {
+    ...piece,
+    shape: rotatedShape,
+    rotation: nextRotation
+  };
+};
+
+/**
+ * 順時針旋轉方塊（右旋轉）
+ * @param piece - 要旋轉的方塊
+ * @returns 旋轉後的新方塊物件
+ */
+export const right_rotatePiece = (piece: Tetromino): Tetromino => {
+  // 計算下一個旋轉狀態（0 → 1 → 2 → 3 → 0）
+  const nextRotation = (piece.rotation + 1) % 4;
+  
+  // 從預定義的形狀中取得旋轉後的形狀
+  const rotatedShape = TETROMINO_SHAPES[piece.type][nextRotation];
+  
+  return {
+    ...piece,
+    shape: rotatedShape,
+    rotation: nextRotation
+  };
 };
 
 /**
@@ -130,25 +216,33 @@ export const mergePieceToBoard = (
  * @param board - 當前遊戲板
  * @returns 物件包含：清除後的遊戲板和清除的行數
  */
-export const clearLines = (board: (TetrominoType | null)[][]): {
+export const clearLines = (board: (TetrominoType | null)[][], ComboNumber: number): {
   board: (TetrominoType | null)[][];
   linesCleared: number;
+  ComboNumber: number;
 } => {
   let linesCleared = 0;
-  
+
   // 過濾掉已填滿的行
+  let ComboClearFlag = true;
   const newBoard = board.filter(row => {
     const isFull = row.every(cell => cell !== null);
-    if (isFull) linesCleared++;
+    if (isFull) {
+      linesCleared++;
+      ComboClearFlag = false;
+    }
     return !isFull; // 保留未填滿的行
   });
+
+  if (ComboClearFlag == true) ComboNumber = 0
+  else ComboNumber+=1;;
 
   // 在頂部補充空行，維持遊戲板高度
   while (newBoard.length < BOARD_HEIGHT) {
     newBoard.unshift(Array(BOARD_WIDTH).fill(null));
   }
 
-  return { board: newBoard, linesCleared };
+  return { board: newBoard, linesCleared, ComboNumber };
 };
 
 /**
@@ -156,32 +250,78 @@ export const clearLines = (board: (TetrominoType | null)[][]): {
  * @param linesCleared - 清除的行數
  * @returns 獲得的分數
  */
-export const calculatePoints = (linesCleared: number): number => {
+export const calculatePoints = (linesCleared: number, ComboNumber: number): number => {
+  let TOTAL_POINTS = 0;
   switch (linesCleared) {
     case 1:
-      return POINTS.SINGLE;   // 100分
+      TOTAL_POINTS += CLEAR_POINTS.SINGLE;   // 1分
+      break;
     case 2:
-      return POINTS.DOUBLE;   // 300分
+      TOTAL_POINTS += CLEAR_POINTS.DOUBLE;   // 2分
+      break;
     case 3:
-      return POINTS.TRIPLE;   // 500分
+      TOTAL_POINTS += CLEAR_POINTS.TRIPLE;   // 3分
+      break;
     case 4:
-      return POINTS.TETRIS;   // 800分（俄羅斯方塊）
-    default:
-      return 0;
+      TOTAL_POINTS += CLEAR_POINTS.TETRIS;   // 4分（俄羅斯方塊）
+      break;
   }
+
+  switch (ComboNumber) {
+    case 0:
+    case 1:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_0;
+      break;
+    case 2:
+    case 3:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_1to2;
+      break;
+    case 3:
+    case 4:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_3to4;
+      break;
+    case 5:
+    case 6:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_5to6;
+      break;
+    case 7:
+    case 8:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_7to8;
+      break;
+    case 9:
+    case 10:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_9to10;
+      break;
+    case 11:
+    case 12:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_11to12;
+      break;
+    case 13:
+    case 14:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_13to14;
+      break;
+    case 15:
+    case 16:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_15to16;
+      break;
+    default:
+      TOTAL_POINTS += COMBO_POINTS.COMBO_17up;
+  }
+
+  return TOTAL_POINTS;
 };
 
 /**
  * 計算方塊直落到底的位置
  * @param board - 當前遊戲板
  * @param piece - 要計算的方塊
- * @returns 方塊落到底部的最終位置
+ * @returns 方塊落到底部的最終位置ghost
  */
 export const getDropPosition = (
   board: (TetrominoType | null)[][],
   piece: Tetromino
 ): Position => {
-  let dropPosition = { ...piece.position };
+  const dropPosition = { ...piece.position };
   
   // 持續向下移動直到不能再移動
   while (isValidMove(board, piece, { x: dropPosition.x, y: dropPosition.y + 1 })) {
