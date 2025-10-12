@@ -43,11 +43,13 @@ export interface GameState {
   gameOver: boolean;                  // 遊戲是否結束
   isPaused: boolean;                  // 遊戲是否暫停
   ComboNumber: number;
+  timeRemaining: number;              // 🔴 新增：剩餘時間（秒）
 }
 
 // 遊戲板尺寸常數
 export const BOARD_WIDTH = 10;   // 遊戲板寬度（格數）
 export const BOARD_HEIGHT = 20;  // 遊戲板高度（格數）
+export const GAME_DURATION = 120; // 遊戲時長：120秒（2分鐘）
 
 /**
  * 定義所有俄羅斯方塊的所有旋轉狀態

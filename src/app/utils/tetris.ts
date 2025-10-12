@@ -53,7 +53,6 @@ class TetrominoBag {
    */
   public next(): TetrominoType {
     // 如果包空了，生成新的一包
-    console.log("bag.length:",this.bag.length);
     if (this.bag.length === 0) {
       this.generateNewBag();
     }

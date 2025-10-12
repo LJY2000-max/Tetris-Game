@@ -61,15 +61,46 @@ const NextPieceDisplay: React.FC<{ nextPiece: GameState['nextPiece'] }> = ({ nex
   );
 };
 
+  /**
+   * 🔴 新增：格式化時間顯示組件
+   * 將秒數轉換為 MM:SS 格式
+   */
+  const TimeDisplay: React.FC<{ timeRemaining: number }> = ({ timeRemaining }) => {
+  // 計算分鐘和秒數
+  const minutes = Math.floor(timeRemaining / 60);
+  const seconds = timeRemaining % 60;
+  
+  // 格式化為兩位數（例如：01:05）
+  const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  
+  // 根據剩餘時間改變顏色：30秒以下顯示紅色警告
+  const timeColorClass = timeRemaining <= 30 ? 'text-red-400' : 'text-cyan-400';
+  
+  return (
+    <div className="time-display bg-gray-800 p-3 rounded">
+      <h3 className="text-white font-semibold">Time</h3>
+      <p className={`text-2xl ${timeColorClass} font-bold`} data-testid="time">
+        {formattedTime}
+      </p>
+      {timeRemaining <= 30 && timeRemaining > 0 && (
+        <p className="text-xs text-red-300 mt-1">Time running out!</p>
+      )}
+    </div>
+  );
+};
+
 /**
  * 遊戲資訊面板組件
  * 顯示分數、等級、控制按鈕等遊戲資訊
  */
 const GameInfo: React.FC<GameInfoProps> = ({ gameState, onStart, onPause }) => {
-  const { score, lines, level, gameOver, isPaused, nextPiece } = gameState;
+  const { score, lines, level, gameOver, isPaused, nextPiece, timeRemaining } = gameState;
 
   return (
+    
     <div className="game-info bg-gray-900 p-4 rounded-lg shadow-2xl space-y-4">
+      {/* 🔴 新增：時間顯示區（放在最上方，最重要） */}
+      <TimeDisplay timeRemaining={timeRemaining} />
       {/* 分數顯示區 */}
       <div className="score-display bg-gray-800 p-3 rounded">
         <h3 className="text-white font-semibold">Score</h3>
@@ -119,6 +150,9 @@ const GameInfo: React.FC<GameInfoProps> = ({ gameState, onStart, onPause }) => {
       {gameOver && (
         <div className="game-over-display bg-red-800 p-3 rounded">
           <p className="text-white font-bold text-center">Game Over!</p>
+          {timeRemaining === 0 && (
+            <p className="text-sm text-white text-center mt-1">Time&apos;s up!</p>
+          )}
         </div>
       )}
 

@@ -9,6 +9,7 @@ import {
   //BOARD_WIDTH,
   //CLEAR_POINTS,
   //COMBO_POINTS
+  GAME_DURATION  // 🔴 新增：匯入遊戲時長常數
 } from '../types/tetris';
 import {
   createEmptyBoard,
@@ -39,11 +40,19 @@ export const useTetris = () => {
     level: 1,
     gameOver: false,
     isPaused: false,
-    ComboNumber: 0
+    ComboNumber: 0,
+    timeRemaining: GAME_DURATION  // 🔴 新增：初始化剩餘時間
   });
+
+  // 🔴 新增：獨立的遊戲運行狀態標記
+  // 用簡單的布林值來控制計時器，避免物件比較問題
+  const [isGameRunning, setIsGameRunning] = useState(false);
 
   // 用於儲存遊戲循環計時器的參考
   const gameLoopRef = useRef<number | null>(null);
+  // 🔴 新增：用於儲存倒數計時器的參考
+  const countdownTimerRef = useRef<number | null>(null);
+  
 
   /**
    * 開始新遊戲
@@ -64,8 +73,12 @@ export const useTetris = () => {
       level: 1,
       gameOver: false,
       isPaused: false,
-      ComboNumber: 0
+      ComboNumber: 0,
+      timeRemaining: GAME_DURATION  // 🔴 新增：重置倒數時間
     });
+
+      // 🔴 設定遊戲為運行狀態
+      setIsGameRunning(true);
   }, []);
 
   /**
@@ -81,6 +94,9 @@ export const useTetris = () => {
    */
   const left_rotate = useCallback(() => {
     setGameState(prev => {
+      // 🔴 添加調試日誌
+      console.log('Left rotate triggered, gameOver:', prev.gameOver, 'isPaused:', prev.isPaused, 'hasPiece:', !!prev.currentPiece);
+      
       if (!prev.currentPiece || prev.gameOver || prev.isPaused) return prev;
 
       // 旋轉方塊
@@ -124,6 +140,9 @@ export const useTetris = () => {
 
   const right_rotate = useCallback(() => {
     setGameState(prev => {
+      // 🔴 添加調試日誌
+      console.log('Left rotate triggered, gameOver:', prev.gameOver, 'isPaused:', prev.isPaused, 'hasPiece:', !!prev.currentPiece);
+
       if (!prev.currentPiece || prev.gameOver || prev.isPaused) return prev;
 
       // 旋轉方塊
@@ -272,6 +291,73 @@ export const useTetris = () => {
       };
     });
   }, []);
+
+    /**
+     * 🔴 修正：監控遊戲結束狀態，停止遊戲運行標記
+     */
+    useEffect(() => {
+      if (gameState.gameOver) {
+        setIsGameRunning(false);
+      }
+    }, [gameState.gameOver]);
+
+    /**
+   * 🔴 完全重寫：倒數計時器 Effect
+   * 關鍵：只依賴 isGameRunning 和 isPaused 這兩個簡單的布林值
+   */
+    useEffect(() => {
+    console.log('Timer effect triggered. isGameRunning:', isGameRunning, 'isPaused:', gameState.isPaused);
+    
+    // 如果遊戲沒在運行或者暫停，清除計時器
+    if (!isGameRunning || gameState.isPaused) {
+      if (countdownTimerRef.current) {
+        console.log('Clearing countdown timer');
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+      return;
+    }
+
+    // 如果計時器已經存在，不要重複創建
+    if (countdownTimerRef.current) {
+      console.log('Timer already exists, skipping creation');
+      return;
+    }
+
+      // 創建新的計時器
+      console.log('Creating new countdown timer');
+    countdownTimerRef.current = window.setInterval(() => {
+      console.log('Timer tick');
+      setGameState(prev => {
+        const newTimeRemaining = prev.timeRemaining - 1;
+        
+        if (newTimeRemaining <= 0) {
+          console.log("Time's up! Game Over");
+          // 🔴 不在這裡設定 isGameRunning，讓另一個 effect 處理
+          return {
+            ...prev,
+            timeRemaining: 0,
+            gameOver: true
+          };
+        }
+        
+        return {
+          ...prev,
+          timeRemaining: newTimeRemaining
+        };
+      });
+    }, 1000);
+
+    // 清理函數
+    return () => {
+      if (countdownTimerRef.current) {
+        console.log('Cleanup: clearing countdown timer');
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, [isGameRunning, gameState.isPaused]); 
+  // 🔴 關鍵：只依賴這兩個簡單的布林值！
   
   /**
    * 遊戲循環 - 自動下落

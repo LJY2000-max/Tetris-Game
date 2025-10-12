@@ -49,9 +49,11 @@ const TetrisGame: React.FC = () => {
         right_rotate();
         break;
       case 'x':              // x-key 左旋
+        console.log("press x");
         right_rotate();
         break;
       case 'z':              // z-key 右旋
+        console.log("press z");
         left_rotate();
         break;
       case ' ':              // 空白鍵：硬降（立即落下）
