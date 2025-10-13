@@ -1,6 +1,6 @@
 // src/components/TetrisGame.tsx
 
-'use client';  // Next.js指令：這是客戶端組件
+'use client';
 
 import React, { useEffect, useCallback } from 'react';
 import GameBoard from './GameBoard';
@@ -16,7 +16,16 @@ import { useTetris } from '../hooks/useTetris';
  */
 const TetrisGame: React.FC = () => {
   // 從自定義Hook獲取遊戲狀態和控制函數
-  const { gameState, startGame, pauseGame, movePiece, left_rotate, right_rotate, hardDrop } = useTetris();
+  const { 
+    gameState, 
+    startGame, 
+    pauseGame, 
+    movePiece, 
+    left_rotate, 
+    right_rotate, 
+    hardDrop,
+    holdCurrentPiece  // 取得暫存功能
+  } = useTetris();
 
   /**
    * 處理鍵盤輸入
@@ -27,7 +36,7 @@ const TetrisGame: React.FC = () => {
     if (gameState.gameOver || !gameState.currentPiece) return;
     
     // 防止遊戲按鍵的預設行為（如方向鍵滾動頁面）
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'c', 'C'].includes(event.key)) {
       event.preventDefault();
     }
 
@@ -36,48 +45,51 @@ const TetrisGame: React.FC = () => {
 
     // 根據按鍵執行對應操作
     switch (event.key) {
-      case 'ArrowLeft':      // 左箭頭：向左移動
+      case 'ArrowLeft':
         movePiece('left');
         break;
-      case 'ArrowRight':     // 右箭頭：向右移動
+      case 'ArrowRight':
         movePiece('right');
         break;
-      case 'ArrowDown':      // 下箭頭：軟降（加速下降）
+      case 'ArrowDown':
         movePiece('down');
         break;
-      case 'ArrowUp':        // 上箭頭：左旋
+      case 'ArrowUp':
         right_rotate();
         break;
-      case 'x':              // x-key 左旋
+      case 'x':
         console.log("press x");
         right_rotate();
         break;
-      case 'z':              // z-key 右旋
+      case 'z':
         console.log("press z");
         left_rotate();
         break;
-      case ' ':              // 空白鍵：硬降（立即落下）
+      case ' ':
         hardDrop();
         break;
-      case 'Escape':         // ESC鍵：暫停/繼續
+      case 'c':  // C 鍵暫存方塊（小寫）
+      case 'C':  // C 鍵暫存方塊（大寫）
+        console.log("press C - Hold piece");
+        holdCurrentPiece();
+        break;
+      case 'Escape':
         pauseGame();
         break;
     }
-  }, [gameState, movePiece, left_rotate, right_rotate, hardDrop, pauseGame]);
+  }, [gameState, movePiece, left_rotate, right_rotate, hardDrop, pauseGame, holdCurrentPiece]);
 
   /**
    * 設置鍵盤事件監聽器
    * 在組件掛載時添加，卸載時移除
    */
   useEffect(() => {
-    // 添加鍵盤事件監聽器
     window.addEventListener('keydown', handleKeyPress);
     
-    // 清理函數：移除事件監聽器
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [handleKeyPress]);  // 依賴handleKeyPress，當它改變時重新綁定
+  }, [handleKeyPress]);
 
   return (
     <div className="tetris-game min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 flex items-center justify-center p-4">

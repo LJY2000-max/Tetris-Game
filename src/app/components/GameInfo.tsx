@@ -7,10 +7,66 @@ import { GameState, COLORS, TETROMINOS } from '../types/tetris';
  * GameInfo組件的屬性介面
  */
 interface GameInfoProps {
-  gameState: GameState;       // 遊戲狀態
-  onStart: () => void;        // 開始遊戲的回調函數
-  onPause: () => void;        // 暫停遊戲的回調函數
+  gameState: GameState;
+  onStart: () => void;
+  onPause: () => void;
 }
+
+/**
+ * 暫存方塊預覽組件
+ * 在4x4的網格中顯示暫存的方塊
+ */
+const HoldPieceDisplay: React.FC<{ holdPiece: GameState['holdPiece'], canHold: boolean }> = ({ holdPiece, canHold }) => {
+  const maxSize = 4;
+
+  return (
+    <div className={`bg-gray-800 p-3 rounded ${!canHold ? 'opacity-50' : ''}`}>
+      <h3 className="text-white font-semibold mb-2">Hold</h3>
+      <div className="grid grid-cols-4 gap-[1px]">
+        {holdPiece ? (
+          // 如果有暫存方塊，顯示它
+          (() => {
+            const shape = TETROMINOS[holdPiece.type];
+            const offsetY = Math.floor((maxSize - shape.length) / 2);
+            const offsetX = Math.floor((maxSize - shape[0].length) / 2);
+
+            return Array.from({ length: maxSize }, (_, y) =>
+              Array.from({ length: maxSize }, (_, x) => {
+                const shapeY = y - offsetY;
+                const shapeX = x - offsetX;
+                const hasBlock = 
+                  shapeY >= 0 && 
+                  shapeY < shape.length && 
+                  shapeX >= 0 && 
+                  shapeX < shape[0].length && 
+                  shape[shapeY][shapeX];
+                
+                return (
+                  <div
+                    key={`${y}-${x}`}
+                    className={`aspect-square ${
+                      hasBlock ? COLORS[holdPiece.type] : 'bg-gray-700'
+                    }`}
+                    data-testid={`hold-cell-${y}-${x}`}
+                  />
+                );
+              })
+            ).flat();
+          })()
+        ) : (
+          // 如果沒有暫存方塊，顯示空網格
+          Array.from({ length: 16 }, (_, i) => (
+            <div
+              key={i}
+              className="aspect-square bg-gray-700"
+              data-testid={`hold-cell-empty-${i}`}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
 
 /**
  * 下一個方塊預覽組件
@@ -61,12 +117,11 @@ const NextPieceDisplay: React.FC<{ nextPiece: GameState['nextPiece'] }> = ({ nex
   );
 };
 
-  /**
-   * 🔴 新增：格式化時間顯示組件
-   * 將秒數轉換為 MM:SS 格式
-   */
-  const TimeDisplay: React.FC<{ timeRemaining: number }> = ({ timeRemaining }) => {
-  // 計算分鐘和秒數
+/**
+ * 格式化時間顯示組件
+ * 將秒數轉換為 MM:SS 格式
+ */
+const TimeDisplay: React.FC<{ timeRemaining: number }> = ({ timeRemaining }) => {
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = timeRemaining % 60;
   
@@ -94,13 +149,16 @@ const NextPieceDisplay: React.FC<{ nextPiece: GameState['nextPiece'] }> = ({ nex
  * 顯示分數、等級、控制按鈕等遊戲資訊
  */
 const GameInfo: React.FC<GameInfoProps> = ({ gameState, onStart, onPause }) => {
-  const { score, lines, level, gameOver, isPaused, nextPiece, timeRemaining } = gameState;
+  const { score, lines, level, gameOver, isPaused, nextPiece, holdPiece, canHold, timeRemaining } = gameState;
 
   return (
-    
     <div className="game-info bg-gray-900 p-4 rounded-lg shadow-2xl space-y-4">
-      {/* 🔴 新增：時間顯示區（放在最上方，最重要） */}
+      {/* 時間顯示區（放在最上方，最重要） */}
       <TimeDisplay timeRemaining={timeRemaining} />
+
+      {/* 暫存方塊顯示區（放在時間和分數之間） */}
+      <HoldPieceDisplay holdPiece={holdPiece} canHold={canHold} />
+
       {/* 分數顯示區 */}
       <div className="score-display bg-gray-800 p-3 rounded">
         <h3 className="text-white font-semibold">Score</h3>
@@ -124,9 +182,7 @@ const GameInfo: React.FC<GameInfoProps> = ({ gameState, onStart, onPause }) => {
 
       {/* 控制按鈕區 */}
       <div className="controls space-y-2">
-        {/* 根據遊戲狀態顯示不同按鈕 */}
         {!gameState.currentPiece || gameOver ? (
-          // 顯示開始/重新開始按鈕
           <button
             onClick={onStart}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors"
@@ -135,7 +191,6 @@ const GameInfo: React.FC<GameInfoProps> = ({ gameState, onStart, onPause }) => {
             {gameOver ? 'Restart' : 'Start Game'}
           </button>
         ) : (
-          // 顯示暫停/繼續按鈕
           <button
             onClick={onPause}
             className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition-colors"
@@ -164,6 +219,7 @@ const GameInfo: React.FC<GameInfoProps> = ({ gameState, onStart, onPause }) => {
           <li>↓ : Soft Drop</li>
           <li>↑ : Rotate</li>
           <li>Space : Hard Drop</li>
+          <li>🔴 C : Hold Piece</li>
         </ul>
       </div>
     </div>

@@ -27,7 +27,7 @@ export interface Tetromino {
   type: TetrominoType;      // 方塊類型
   position: Position;        // 當前在遊戲板上的位置
   shape: number[][];        // 方塊形狀的二維陣列（1表示有方塊，0表示空）
-  rotation: number;         // 🔴 新增：當前旋轉狀態（0, 1, 2, 3）
+  rotation: number;         // 當前旋轉狀態（0, 1, 2, 3）
 }
 
 /**
@@ -37,13 +37,15 @@ export interface GameState {
   board: (TetrominoType | null)[][];  // 遊戲板：20x10的二維陣列，null表示空格
   currentPiece: Tetromino | null;     // 當前正在下落的方塊
   nextPiece: Tetromino | null;        // 下一個將要出現的方塊
+  holdPiece: Tetromino | null;        // 暫存的方塊
+  canHold: boolean;                   // 是否可以暫存（防止連續暫存）
   score: number;                      // 當前分數
   lines: number;                      // 已消除的總行數
   level: number;                      // 當前等級（影響下落速度）
   gameOver: boolean;                  // 遊戲是否結束
   isPaused: boolean;                  // 遊戲是否暫停
   ComboNumber: number;
-  timeRemaining: number;              // 🔴 新增：剩餘時間（秒）
+  timeRemaining: number;              // 剩餘時間（秒）
 }
 
 // 遊戲板尺寸常數

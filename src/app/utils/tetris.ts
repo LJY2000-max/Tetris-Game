@@ -62,7 +62,7 @@ class TetrominoBag {
   }
 
   /**
-   * 🔴 新增：重置方塊包
+   * 重置方塊包
    * 清空當前的包，下次呼叫 next() 時會生成新的一包
    */
   public reset(): void {
@@ -82,7 +82,7 @@ export const randomTetrominoType = (): TetrominoType => {
 };
 
 /**
- * 🔴 新增：重置方塊包（遊戲開始或結束時呼叫）
+ * 重置方塊包（遊戲開始或結束時呼叫）
  */
 export const resetTetrominoBag = (): void => {
   tetrominoBag.reset();
@@ -94,7 +94,7 @@ export const resetTetrominoBag = (): void => {
  * @returns 包含類型、初始位置和形狀的俄羅斯方塊物件
  */
 export const createTetromino = (type: TetrominoType): Tetromino => {
-  const shape = TETROMINO_SHAPES[type][0]; // 🔴 使用第 0 個旋轉狀態
+  const shape = TETROMINO_SHAPES[type][0]; // 使用第 0 個旋轉狀態
   return {
     type,
     shape,
