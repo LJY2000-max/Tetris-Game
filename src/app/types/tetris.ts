@@ -36,7 +36,7 @@ export interface Tetromino {
 export interface GameState {
   board: (TetrominoType | null)[][];  // 遊戲板：20x10的二維陣列，null表示空格
   currentPiece: Tetromino | null;     // 當前正在下落的方塊
-  nextPiece: Tetromino | null;        // 下一個將要出現的方塊
+  nextPieces: Tetromino[];            // 接下來的 5 個方塊
   holdPiece: Tetromino | null;        // 暫存的方塊
   canHold: boolean;                   // 是否可以暫存（防止連續暫存）
   score: number;                      // 當前分數

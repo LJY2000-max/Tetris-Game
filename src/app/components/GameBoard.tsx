@@ -8,56 +8,74 @@ import { getGhostPiece } from '../utils/tetris';
  * GameBoard組件的屬性介面
  */
 interface GameBoardProps {
-  gameState: GameState;  // 從父組件傳入的遊戲狀態
+  gameState: GameState;
+  timeRemaining: number;
 }
 
 /**
- * 遊戲板組件 - 負責渲染20x10的遊戲板
- * 功能：
- * 1. 顯示已固定的方塊
- * 2. 顯示當前下落的方塊
- * 3. 顯示幽靈方塊（預覽落下位置）
+ * 時間顯示組件
  */
-const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
+const TimeDisplay: React.FC<{ timeRemaining: number }> = ({ timeRemaining }) => {
+  const minutes = Math.floor(timeRemaining / 60);
+  const seconds = timeRemaining % 60;
+  const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const timeColorClass = timeRemaining <= 30 ? 'text-red-400' : 'text-cyan-400';
+  
+  return (
+    <div className="time-display text-center mb-4">
+      <h1 className={`text-6xl font-bold ${timeColorClass} tracking-wider`}>
+        {formattedTime}
+      </h1>
+      {/*
+      {timeRemaining <= 30 && timeRemaining > 0 && (
+        <p className="text-red-300 mt-2 text-lg font-semibold animate-pulse">
+          ⚠ Time running out!
+        </p>
+      )}
+      */}
+    </div>
+  );
+};
+
+/**
+ * 遊戲板組件
+ */
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, timeRemaining }) => {
   const { board, currentPiece } = gameState;
 
   // 建立顯示用的遊戲板副本
   const displayBoard = board.map(row => [...row]);
   
-  // 步驟1：添加幽靈方塊（半透明預覽）
+  // 添加幽靈方塊
   if (currentPiece) {
-    // 計算幽靈方塊位置
     const ghostPiece = getGhostPiece(board, currentPiece);
     
-    // 將幽靈方塊繪製到顯示板上
     ghostPiece.shape.forEach((row, y) => {
       row.forEach((cell, x) => {
         if (cell) {
           const boardY = ghostPiece.position.y + y;
           const boardX = ghostPiece.position.x + x;
-          // 確保在邊界內且該位置為空
           if (
             boardY >= 0 && 
             boardY < displayBoard.length && 
             boardX >= 0 && 
             boardX < displayBoard[0].length &&
-            !displayBoard[boardY][boardX]  // 只在空格顯示幽靈方塊
+            !displayBoard[boardY][boardX]
           ) {
-            displayBoard[boardY][boardX] = 'ghost' as TetrominoType;  // 特殊標記
+            displayBoard[boardY][boardX] = 'ghost' as TetrominoType;
           }
         }
       });
     });
   }
 
-  // 步驟2：添加當前下落的方塊（覆蓋幽靈方塊）
+  // 添加當前方塊
   if (currentPiece) {
     currentPiece.shape.forEach((row, y) => {
       row.forEach((cell, x) => {
         if (cell) {
           const boardY = currentPiece.position.y + y;
           const boardX = currentPiece.position.x + x;
-          // 確保在邊界內
           if (
             boardY >= 0 && 
             boardY < displayBoard.length && 
@@ -72,31 +90,32 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   }
 
   return (
-    <div className="game-board bg-gray-900 p-2 rounded-lg shadow-2xl">
-      {/* 遊戲板網格容器 */}
-      <div className="grid grid-cols-10 gap-[5px] bg-gray-700 p-1 w-[400px]">
-        {/* 渲染每個格子 */}
-        {displayBoard.map((row, y) => (
-          row.map((cell, x) => {
-            // 判斷是否為幽靈方塊
-            const isGhost = (cell as string) === 'ghost';
-            
-            // 根據格子內容決定樣式
-            const cellClass = isGhost 
-              ? 'bg-gray-700 opacity-30 border border-gray-500'  // 幽靈方塊：半透明
-              : cell 
-                ? `${COLORS[cell as TetrominoType]} border border-gray-800`  // 實體方塊：對應顏色
-                : 'bg-gray-800 border border-gray-700';  // 空格：深灰色
-            
-            return (
-              <div
-                key={`${y}-${x}`}
-                className={`aspect-square ${cellClass} transition-all duration-100`}
-                data-testid={`cell-${y}-${x}`}  // 測試用ID
-              />
-            );
-          })
-        ))}
+    <div className="game-board-container">
+      {/* 時間顯示在遊戲板上方 */}
+      <TimeDisplay timeRemaining={timeRemaining} />
+      
+      {/* 遊戲板 */}
+      <div className="game-board bg-gray-900 p-2 rounded-lg shadow-2xl">
+        <div className="grid grid-cols-10 gap-[2px] bg-gray-700 p-1">
+          {displayBoard.map((row, y) => (
+            row.map((cell, x) => {
+              const isGhost = (cell as string) === 'ghost';
+              
+              const cellClass = isGhost 
+                ? 'bg-gray-700 opacity-30 border border-gray-500'
+                : cell 
+                  ? `${COLORS[cell as TetrominoType]} border border-gray-800`
+                  : 'bg-gray-800 border border-gray-700';
+              
+              return (
+                <div
+                  key={`${y}-${x}`}
+                  className={`w-8 h-8 ${cellClass} transition-all duration-100 rounded-sm`}
+                />
+              );
+            })
+          ))}
+        </div>
       </div>
     </div>
   );
