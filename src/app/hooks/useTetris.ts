@@ -110,7 +110,7 @@ export const useTetris = () => {
         return prev;
       }
 
-      //console.log('Holding piece:', prev.currentPiece.type);
+      console.log('Holding piece:', prev.currentPiece.type);
 
       // 如果暫存區是空的
       if (!prev.holdPiece) {
@@ -256,11 +256,16 @@ export const useTetris = () => {
       // 如果是向下移動且無法繼續,固定方塊
       if (direction === 'down') {
         const boardWithPiece = mergePieceToBoard(prev.board, prev.currentPiece);
-        const { board: clearedBoard, linesCleared, ComboNumber } = clearLines(boardWithPiece, prev.ComboNumber);
+        const { board: clearedBoard, linesCleared, ComboNumber, isPerfectClear } = clearLines(boardWithPiece, prev.ComboNumber);
         
-        const newScore = prev.score + calculatePoints(linesCleared, ComboNumber);
+        const newScore = prev.score + calculatePoints(linesCleared, ComboNumber, isPerfectClear);
         const newLines = prev.lines + linesCleared;
         const newLevel = Math.floor(newLines / 10) + 1;
+
+        // 如果是完美消除，在控制台記錄
+        if (isPerfectClear) {
+          console.log('🎉 PERFECT CLEAR! +10 分');
+        }
 
         // 使用第一個 next 方塊作為新的當前方塊
         const newCurrentPiece = prev.nextPieces[0];
@@ -301,11 +306,16 @@ export const useTetris = () => {
       const dropPosition = getDropPosition(prev.board, prev.currentPiece);
       const droppedPiece = { ...prev.currentPiece, position: dropPosition };
       const boardWithPiece = mergePieceToBoard(prev.board, droppedPiece);
-      const { board: clearedBoard, linesCleared, ComboNumber } = clearLines(boardWithPiece, prev.ComboNumber);
+      const { board: clearedBoard, linesCleared, ComboNumber, isPerfectClear } = clearLines(boardWithPiece, prev.ComboNumber);
 
-      const newScore = prev.score + calculatePoints(linesCleared, ComboNumber);
+      const newScore = prev.score + calculatePoints(linesCleared, ComboNumber, isPerfectClear);
       const newLines = prev.lines + linesCleared;
       const newLevel = Math.floor(newLines / 10) + 1;
+
+      // 如果是完美消除，在控制台記錄
+      if (isPerfectClear) {
+        console.log('🎉 PERFECT CLEAR! +10 分');
+      }
 
       // 使用第一個 next 方塊作為新的當前方塊
       const newCurrentPiece = prev.nextPieces[0];
@@ -426,11 +436,16 @@ export const useTetris = () => {
       }
 
       const boardWithPiece = mergePieceToBoard(currentState.board, currentState.currentPiece);
-      const { board: clearedBoard, linesCleared, ComboNumber } = clearLines(boardWithPiece, currentState.ComboNumber);
+      const { board: clearedBoard, linesCleared, ComboNumber, isPerfectClear } = clearLines(boardWithPiece, currentState.ComboNumber);
       
-      const newScore = currentState.score + calculatePoints(linesCleared, ComboNumber);
+      const newScore = currentState.score + calculatePoints(linesCleared, ComboNumber, isPerfectClear);
       const newLines = currentState.lines + linesCleared;
       const newLevel = Math.floor(newLines / 10) + 1;
+
+      // 如果是完美消除，在控制台記錄
+      if (isPerfectClear) {
+        console.log('🎉 PERFECT CLEAR! +10 分');
+      }
 
       // 使用第一個 next 方塊作為新的當前方塊
       const newCurrentPiece = currentState.nextPieces[0];

@@ -124,23 +124,23 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ gameState, onStart, onPause }) =>
         <ul className="space-y-2">
           <li className="flex justify-between">
             <span>← →</span>
-            <span>Move</span>
+            <span>移動</span>
           </li>
           <li className="flex justify-between">
             <span>↓</span>
-            <span>Soft Drop</span>
+            <span>加速降落</span>
           </li>
           <li className="flex justify-between">
             <span>↑ / X</span>
-            <span>Rotate R</span>
+            <span>右旋(順時針)</span>
           </li>
           <li className="flex justify-between">
             <span>Z</span>
-            <span>Rotate L</span>
+            <span>左旋(逆時針)</span>
           </li>
           <li className="flex justify-between">
             <span>Space</span>
-            <span>Hard Drop</span>
+            <span>瞬間降落</span>
           </li>
           <li className="flex justify-between">
             <span className="text-red-400 font-bold">C</span>

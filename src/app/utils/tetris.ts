@@ -213,12 +213,14 @@ export const mergePieceToBoard = (
 /**
  * 清除已填滿的行
  * @param board - 當前遊戲板
- * @returns 物件包含：清除後的遊戲板和清除的行數
+ * @param ComboNumber - 當前連擊數
+ * @returns 物件包含：清除後的遊戲板、清除的行數、連擊數、是否完美消除
  */
 export const clearLines = (board: (TetrominoType | null)[][], ComboNumber: number): {
   board: (TetrominoType | null)[][];
   linesCleared: number;
   ComboNumber: number;
+  isPerfectClear: boolean;
 } => {
   let linesCleared = 0;
 
@@ -234,23 +236,30 @@ export const clearLines = (board: (TetrominoType | null)[][], ComboNumber: numbe
   });
 
   if (ComboClearFlag == true) ComboNumber = 0
-  else ComboNumber+=1;;
+  else ComboNumber += 1;
+
+  // 檢查是否完美消除：消除行數 > 0 且遊戲板完全清空（所有格子都是 null）
+  const isPerfectClear = linesCleared > 0 && newBoard.every(row => row.every(cell => cell === null));
 
   // 在頂部補充空行，維持遊戲板高度
   while (newBoard.length < BOARD_HEIGHT) {
     newBoard.unshift(Array(BOARD_WIDTH).fill(null));
   }
 
-  return { board: newBoard, linesCleared, ComboNumber };
+  return { board: newBoard, linesCleared, ComboNumber, isPerfectClear };
 };
 
 /**
- * 根據清除的行數計算得分
+ * 根據清除的行數、連擊數和完美消除計算得分
  * @param linesCleared - 清除的行數
+ * @param ComboNumber - 連擊數
+ * @param isPerfectClear - 是否完美消除
  * @returns 獲得的分數
  */
-export const calculatePoints = (linesCleared: number, ComboNumber: number): number => {
+export const calculatePoints = (linesCleared: number, ComboNumber: number, isPerfectClear: boolean = false): number => {
   let TOTAL_POINTS = 0;
+  
+  // 基礎消除分數
   switch (linesCleared) {
     case 1:
       TOTAL_POINTS += CLEAR_POINTS.SINGLE;   // 1分
@@ -267,6 +276,8 @@ export const calculatePoints = (linesCleared: number, ComboNumber: number): numb
   }
   if(ComboNumber>0)
     console.log(`消除 ${linesCleared} 行，${ComboNumber-1} COMBO}`);
+
+  // 連擊分數
   switch (ComboNumber) {
     case 0:
     case 1:
@@ -306,6 +317,11 @@ export const calculatePoints = (linesCleared: number, ComboNumber: number): numb
       break;
     default:
       TOTAL_POINTS += COMBO_POINTS.COMBO_17up;
+  }
+
+  // 完美消除額外分數
+  if (isPerfectClear) {
+    TOTAL_POINTS += CLEAR_POINTS.PERFECT_CLEAR;  // 10分
   }
 
   return TOTAL_POINTS;
