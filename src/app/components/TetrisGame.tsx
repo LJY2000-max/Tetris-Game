@@ -43,17 +43,17 @@ const TetrisGame: React.FC = () => {
    */
   const clearAllTimers = useCallback(() => {
     if (initialDelayTimerRef.current) {
-      console.log('Clearing initial delay timer');
+      //console.log('Clearing initial delay timer');
       clearTimeout(initialDelayTimerRef.current);
       initialDelayTimerRef.current = null;
     }
     if (continuousMoveTimerRef.current) {
-      console.log('Clearing continuous move timer');
+      //console.log('Clearing continuous move timer');
       clearInterval(continuousMoveTimerRef.current);
       continuousMoveTimerRef.current = null;
     }
     if (downKeyTimerRef.current) {
-      console.log('Clearing down key timer');
+      //console.log('Clearing down key timer');
       clearInterval(downKeyTimerRef.current);
       downKeyTimerRef.current = null;
     }
@@ -65,7 +65,7 @@ const TetrisGame: React.FC = () => {
    * 開始連續移動
    */
   const startContinuousMove = useCallback((direction: 'left' | 'right') => {
-    console.log(`Starting continuous move: ${direction}`);
+    //console.log(`Starting continuous move: ${direction}`);
     
     // 只清除左右移動的計時器，不清除下鍵計時器
     if (initialDelayTimerRef.current) {
@@ -80,7 +80,7 @@ const TetrisGame: React.FC = () => {
     // 檢查遊戲狀態（使用 ref）
     const state = gameStateRef.current;
     if (state.gameOver || state.isPaused || !state.currentPiece) {
-      console.log('Game not active, not starting move');
+      //console.log('Game not active, not starting move');
       return;
     }
     
@@ -90,13 +90,13 @@ const TetrisGame: React.FC = () => {
     
     // 0.1 秒後開始連續移動
     initialDelayTimerRef.current = window.setTimeout(() => {
-      console.log(`Starting interval for ${direction}`);
+      //console.log(`Starting interval for ${direction}`);
       
       continuousMoveTimerRef.current = window.setInterval(() => {
         // 每次移動前都檢查遊戲狀態（使用 ref）
         const currentState = gameStateRef.current;
         if (currentState.gameOver || currentState.isPaused || !currentState.currentPiece) {
-          console.log('Game state changed during interval, stopping');
+          //console.log('Game state changed during interval, stopping');
           if (initialDelayTimerRef.current) clearTimeout(initialDelayTimerRef.current);
           if (continuousMoveTimerRef.current) clearInterval(continuousMoveTimerRef.current);
           initialDelayTimerRef.current = null;
@@ -104,7 +104,7 @@ const TetrisGame: React.FC = () => {
           currentDirectionRef.current = null;
           return;
         }
-        console.log(`Continuous moving ${direction}`);
+        //console.log(`Continuous moving ${direction}`);
         movePieceRef.current(direction);
       }, 50); // 每 50ms 移動一次
     }, 100); // 初次延遲 0.1 秒
@@ -114,7 +114,7 @@ const TetrisGame: React.FC = () => {
    * 停止連續移動（只停止左右移動）
    */
   const stopContinuousMove = useCallback(() => {
-    console.log('Stopping continuous move');
+    //console.log('Stopping continuous move');
     if (initialDelayTimerRef.current) {
       clearTimeout(initialDelayTimerRef.current);
       initialDelayTimerRef.current = null;
@@ -130,7 +130,7 @@ const TetrisGame: React.FC = () => {
    * 開始連續下降
    */
   const startContinuousDown = useCallback(() => {
-    console.log('Starting continuous down');
+    //console.log('Starting continuous down');
     
     // 如果已經在下降，不重複啟動
     if (isDownKeyPressedRef.current) {
@@ -140,7 +140,7 @@ const TetrisGame: React.FC = () => {
     // 檢查遊戲狀態
     const state = gameStateRef.current;
     if (state.gameOver || state.isPaused || !state.currentPiece) {
-      console.log('Game not active, not starting down');
+      //console.log('Game not active, not starting down');
       return;
     }
     
@@ -157,7 +157,7 @@ const TetrisGame: React.FC = () => {
     downKeyTimerRef.current = window.setInterval(() => {
       const currentState = gameStateRef.current;
       if (currentState.gameOver || currentState.isPaused || !currentState.currentPiece) {
-        console.log('Game state changed during down, stopping');
+        //console.log('Game state changed during down, stopping');
         if (downKeyTimerRef.current) {
           clearInterval(downKeyTimerRef.current);
           downKeyTimerRef.current = null;
@@ -165,7 +165,7 @@ const TetrisGame: React.FC = () => {
         isDownKeyPressedRef.current = false;
         return;
       }
-      console.log('Continuous moving down');
+      //console.log('Continuous moving down');
       movePieceRef.current('down');
     }, 75); // 每 75ms 下降一次
   }, []);
@@ -174,7 +174,7 @@ const TetrisGame: React.FC = () => {
    * 停止連續下降
    */
   const stopContinuousDown = useCallback(() => {
-    console.log('Stopping continuous down');
+    //console.log('Stopping continuous down');
     if (downKeyTimerRef.current) {
       clearInterval(downKeyTimerRef.current);
       downKeyTimerRef.current = null;
@@ -244,11 +244,11 @@ const TetrisGame: React.FC = () => {
       const direction = event.key === 'ArrowLeft' ? 'left' : 'right';
       // 只有當前方向匹配時才停止
       if (currentDirectionRef.current === direction) {
-        console.log(`Key up: ${direction}`);
+        //console.log(`Key up: ${direction}`);
         stopContinuousMove();
       }
     } else if (event.key === 'ArrowDown') {
-      console.log('Key up: down');
+      //console.log('Key up: down');
       stopContinuousDown();
     }
   }, [stopContinuousMove, stopContinuousDown]);
@@ -258,7 +258,7 @@ const TetrisGame: React.FC = () => {
    */
   useEffect(() => {
     if (gameState.gameOver || gameState.isPaused) {
-      console.log('Game state changed, clearing timers');
+      //console.log('Game state changed, clearing timers');
       clearAllTimers();
     }
   }, [gameState.gameOver, gameState.isPaused, clearAllTimers]);

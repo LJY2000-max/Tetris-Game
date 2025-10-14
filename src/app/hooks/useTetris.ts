@@ -4,7 +4,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   GameState,
   Position,
-  GAME_DURATION
+  GAME_DURATION,
+  TetrominoType
 } from '../types/tetris';
 import {
   createEmptyBoard,
@@ -275,38 +276,175 @@ export const useTetris = () => {
   }, [clearLockDelay]);
 
   /**
-   * 旋轉方塊（左旋）
+   * 取得踢牆測試位置（SRS 標準）
+   * @param pieceType - 方塊類型
+   * @param fromRotation - 原始旋轉狀態
+   * @param toRotation - 目標旋轉狀態
+   * @returns 踢牆測試位置陣列
+   */
+  const getWallKickTests = (pieceType: TetrominoType, fromRotation: number, toRotation: number): Position[] => {
+    // I 方塊使用獨立的踢牆表
+    if (pieceType === 'I') {
+      const iKickTable: Record<string, Position[]> = {
+        '0->1': [{ x: 0, y: 0 }, { x: -2, y: 0 }, { x: 1,  y: 0 }, { x: -2, y: -1 }, { x: 1,  y: 2 }],
+        '1->2': [{ x: 0, y: 0 }, { x: 2,  y: 0 }, { x: -1, y: 0 }, { x: 2,  y: 1 }, {  x: -1, y: -2 }],
+        '2->3': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: 2,  y: 0 }, { x: -1, y: 2 }, {  x: 2,  y: -1 }],
+        '3->0': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: -2, y: 0 }, { x: 1,  y: -2 }, { x: -2, y: 1 }],
+        '0->3': [{ x: 0, y: 0 }, { x: 2,  y: 0 }, { x: -1, y: 0 }, { x: 2,  y: 1 }, {  x: -1, y: -2 }],
+        '3->2': [{ x: 0, y: 0 }, { x: -2, y: 0 }, { x: 1,  y: 0 }, { x: -2, y: -1 }, { x: 1,  y: 2 }],
+        '2->1': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: -2, y: 0 }, { x: 1,  y: -2 }, { x: -2, y: 1 }],
+        '1->0': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: 2,  y: 0 }, { x: -1, y: 2 }, {  x: 2,  y: -1 }]
+      };
+      
+      const key = `${fromRotation}->${toRotation}`;
+      return iKickTable[key] || [{ x: 0, y: 0 }];
+    }
+    
+    // O 方塊不需要踢牆
+    if (pieceType === 'O') {
+      return [{ x: 0, y: 0 }];
+    }
+    if (pieceType === 'T') {
+      // T 使用標準踢牆表
+      const tKickTable: Record<string, Position[]> = {
+        '0->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: -1, y: 2 }, {  x: 0,  y: -2 }, { x: -1, y: -2 }],
+        '1->2': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: -1 }, { x: 0,  y: 2 }, {  x: 1,  y: 2 }],
+        '2->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: -1 }, { x: 0,  y: 2 }, {  x: 1,  y: 2 }],
+        '3->0': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: 0,  y: -2 }, { x: -1, y: -2 }],
+        '0->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 1,  y: 2 }, {  x: 0,  y: -2 }, { x: 1, y: -2 }],
+        '3->2': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0,  y: 2 }, {  x: -1, y: 2 }],
+        '2->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0,  y: 2 }, {  x: -1, y: 2 }],
+        '1->0': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 0,  y: -2 }, { x: 1,  y: -2 }]
+      };
+
+      const key = `${fromRotation}->${toRotation}`;
+      return tKickTable[key] || [{ x: 0, y: 0 }];
+    }
+
+    if (pieceType === 'S') {
+      // S 使用標準踢牆表
+      const sKickTable: Record<string, Position[]> = {
+        '0->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: -1, y: 2 }, {  x: 0,  y: -2 }, { x: -1, y: -2 }],
+        //L T轉，軸心位移x:1、y:1，，以下新增一個(x:1、y:1) 
+        '1->2': [{ x: 0, y: 0 }, { x: 0,  y: 1 }, { x: 1,  y: 1 }, {  x: -1, y: 1 } , { x: 1,  y: 0 }, {  x: 1,  y: -1 }, { x: 0,  y: 2 }, { x: 1,  y: 2 } ],
+        '2->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 2 }, {  x: 1,  y: -1 }, { x: 0,  y: 2 } ],
+        '3->0': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: 0,  y: -2 }, { x: -1, y: -2 }],
+        //新增一個(x:2、y:2)
+        '0->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 1,  y: 2 }, {  x: 0,  y: 2 }, {  x: 0,  y: -2 }, { x: 1, y: -2 }],
+        //L Z轉，軸心位移x:-1、y:1，以下新增一個(x:-1、y:1)
+        '3->2': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: -1, y: -1 }, { x: 0,  y: 2 }, {  x: -1, y: 2 }],
+        '2->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0,  y: 2 }, {  x: -1, y: 2 }],
+        '1->0': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 0,  y: -2 }, { x: 1,  y: -2 }]
+      };
+      
+      const key = `${fromRotation}->${toRotation}`;
+      return sKickTable[key] || [{ x: 0, y: 0 }];
+    }
+
+    if (pieceType === 'Z') {
+      // Z 使用標準踢牆表
+      const zKickTable: Record<string, Position[]> = {
+        //新增一個(x:2、y:2)
+        '0->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: 2}, {  x: -1, y: 2 }, {  x: 0,  y: -2 }, { x: -1, y: -2 }],
+        //L S轉，軸心位移x:1、y:1，以下新增一個(x:1、y:1)
+        '1->2': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 2 }, {  x: 1,  y: -1 }, { x: 0,  y: 2 }, { x: 1, y: 1} ],
+        '2->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: -1 }, { x: 0,  y: 2 }, {  x: 1,  y: 2 }],
+        '3->0': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: 0,  y: -2 }, { x: -1, y: -2 }],
+        //(x:1、y:2)
+        '0->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 1,  y: 2 }, {  x: 0,  y: -2 }, { x: 1, y: -2 }],
+        //L T轉，軸心位移x:-1、y:1、，以下新增一個(x:-1、y:2)
+        '3->2': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 2 }, {  x:-1,  y: 1 }, {  x: -1, y: -1 }, { x: 0,  y: 2 }, { x: -1, y: 2 }],
+        '2->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0,  y: 2 }, {  x: -1, y: 2 }],
+        '1->0': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 0,  y: -2 }, { x: 1,  y: -2 }]
+      };
+      
+      const key = `${fromRotation}->${toRotation}`;
+      return zKickTable[key] || [{ x: 0, y: 0 }];
+    }
+
+    if (pieceType === 'J') {
+      // J 使用標準踢牆表
+      const jKickTable: Record<string, Position[]> = {
+        '0->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: 0, y: -2 }, { x: -1, y: -2 }],
+        //(x:1, y:0)、(x:1、y:1)、(x:-1、y:0)
+        '1->2': [{ x: -1, y: 1 }, { x: 1,  y: 0 }, { x: 1,  y: -1 }, { x: 0, y: 2 }, {  x: 1,  y: 2 }, { x: 1, y: 1 }, { x: -1, y: 0 }],
+        '2->3': [{ x: 0,  y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: -1 }, { x: 0, y: 2 }, {  x: 1,  y: 2 }],
+        //(x:-1, y:1)
+        '3->0': [{ x: 0,  y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: 0, y: -2 }, { x: -1, y: -2 }],
+        //(x:1, y:2)
+        '0->3': [{ x: 0,  y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, { x: 1, y: 2 }, {  x: 0, y: -2 }, { x: 1,  y: -2 }],
+        //(x:-1, y:1)
+        '3->2': [{ x: 0,  y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: -1, y: -1 }, { x: 0, y: 2 }, {  x: -1, y: 2 }],
+        '2->1': [{ x: 0,  y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, {  x: -1, y: 2 }],
+        //(x:1, y:1)
+        '1->0': [{ x: 0,  y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 0, y: -2 }, { x: 1,  y: -2 }]
+      };
+      
+      const key = `${fromRotation}->${toRotation}`;
+      return jKickTable[key] || [{ x: 0, y: 0 }];
+    }
+
+    if (pieceType === 'L') {
+      // L 使用標準踢牆表
+      const lKickTable: Record<string, Position[]> = {
+        //(x:-1, y:2)
+        '0->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: -1, y: 2}, {  x: 0, y: -2 }, { x: -1, y: -2 }],
+        '1->2': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: -1 }, { x: 0, y: 2 }, {  x: 1,  y: 2 }],
+        //(x:1, y:1)
+        '2->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1, y: 1 }, { x: 1,  y: -1 }, { x: 0, y: 2 }, {  x: 1,  y: 2 }],
+        //(x:-1, y:1)
+        '3->0': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, {  x: 0, y: -2 }, { x: -1, y: -2 }],
+        '0->3': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 0, y: -2 }, { x: 1,  y: -2 }],
+        //(x:1, y:0)、(x:-1、y:1)、(x:-1、y:0)
+        '3->2': [{ x: 0, y: 0 }, { x: -1, y: 1 }, { x: -1, y: 0}, { x: 1,  y: 0 }, { x: 1,  y: -1 }, { x: 0, y: 2 }, {  x: 1,  y: 2 }],
+        '2->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, {  x: -1, y: 2 }],
+        //(x:1, y:1)
+        '1->0': [{ x: 0, y: 0 }, { x: 1,  y: 0 }, { x: 1,  y: 1 }, {  x: 0, y: -2 }, { x: 1,  y: -2 }]
+      };
+      
+      const key = `${fromRotation}->${toRotation}`;
+      return lKickTable[key] || [{ x: 0, y: 0 }];
+    }
+
+    // J, L, S, T, Z 使用標準踢牆表
+    const jlstzKickTable: Record<string, Position[]> = {
+      '0->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      '1->2': [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      '2->3': [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      '3->0': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      '0->3': [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+      '3->2': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      '2->1': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      '1->0': [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }]
+    };
+    
+    const key = `${fromRotation}->${toRotation}`;
+    return jlstzKickTable[key] || [{ x: 0, y: 0 }];
+  };
+
+  /**
+   * 旋轉方塊（左旋）- 使用 SRS 標準踢牆機制
    */
   const left_rotate = useCallback(() => {
     setGameState(prev => {
       if (!prev.currentPiece || prev.gameOver || prev.isPaused) return prev;
 
+      const currentRotation = prev.currentPiece.rotation;
       const rotated = left_rotatePiece(prev.currentPiece);
+      const targetRotation = rotated.rotation;
       
-      if (isValidMove(prev.board, rotated, rotated.position)) {
-        // 旋轉成功，重置 Lock Delay
-        resetLockDelay();
-        return { ...prev, currentPiece: rotated };
-      }
-
-      const kicks = [
-        { x: 0, y: 0 },
-        { x: -1, y: 1},
-        { x: 1, y: 1},
-        { x: -1, y: 0 },
-        { x: 1, y: 0 },
-        { x: 0, y: -1 },
-        { x: -1, y: -1 },
-        { x: 1, y: -1 }
-      ];
-
-      for (const kick of kicks) {
+      // 取得踢牆測試位置
+      const kickTests = getWallKickTests(prev.currentPiece.type, currentRotation, targetRotation);
+      
+      // 依序測試每個踢牆位置
+      for (const kick of kickTests) {
         const newPosition = {
           x: rotated.position.x + kick.x,
           y: rotated.position.y + kick.y
         };
+
         if (isValidMove(prev.board, rotated, newPosition)) {
-          // Wall kick 成功，重置 Lock Delay
+          // 踢牆成功，重置 Lock Delay
           resetLockDelay();
           return {
             ...prev,
@@ -315,43 +453,34 @@ export const useTetris = () => {
         }
       }
 
+      // 所有踢牆測試都失敗
       return prev;
     });
   }, [resetLockDelay]);
 
   /**
-   * 旋轉方塊（右旋）
+   * 旋轉方塊（右旋）- 使用 SRS 標準踢牆機制
    */
   const right_rotate = useCallback(() => {
     setGameState(prev => {
       if (!prev.currentPiece || prev.gameOver || prev.isPaused) return prev;
 
+      const currentRotation = prev.currentPiece.rotation;
       const rotated = right_rotatePiece(prev.currentPiece);
+      const targetRotation = rotated.rotation;
       
-      if (isValidMove(prev.board, rotated, rotated.position)) {
-        // 旋轉成功，重置 Lock Delay
-        resetLockDelay();
-        return { ...prev, currentPiece: rotated };
-      }
-
-      const kicks = [
-        { x: 0, y: 0 },
-        { x: -1, y: 1},
-        { x: 1, y: 1},
-        { x: -1, y: 0 },
-        { x: 1, y: 0 },
-        { x: 0, y: -1 },
-        { x: -1, y: -1 },
-        { x: 1, y: -1 }
-      ];
-
-      for (const kick of kicks) {
+      // 取得踢牆測試位置
+      const kickTests = getWallKickTests(prev.currentPiece.type, currentRotation, targetRotation);
+      
+      // 依序測試每個踢牆位置
+      for (const kick of kickTests) {
         const newPosition = {
           x: rotated.position.x + kick.x,
           y: rotated.position.y + kick.y
         };
+        
         if (isValidMove(prev.board, rotated, newPosition)) {
-          // Wall kick 成功，重置 Lock Delay
+          // 踢牆成功，重置 Lock Delay
           resetLockDelay();
           return {
             ...prev,
@@ -360,6 +489,7 @@ export const useTetris = () => {
         }
       }
 
+      // 所有踢牆測試都失敗
       return prev;
     });
   }, [resetLockDelay]);
