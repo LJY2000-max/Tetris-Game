@@ -17,7 +17,7 @@ export type TetrominoType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
  */
 export interface Position {
   x: number;  // 水平位置（0-9）
-  y: number;  // 垂直位置（0-19）
+  y: number;  // 垂直位置（0-20，包含隱藏層）
 }
 
 /**
@@ -34,7 +34,7 @@ export interface Tetromino {
  * 遊戲狀態介面 - 包含遊戲的所有狀態資訊
  */
 export interface GameState {
-  board: (TetrominoType | null)[][];  // 遊戲板：20x10的二維陣列，null表示空格
+  board: (TetrominoType | null)[][];  // 遊戲板：21x10的二維陣列（包含1行隱藏層），null表示空格
   currentPiece: Tetromino | null;     // 當前正在下落的方塊
   nextPieces: Tetromino[];            // 接下來的 5 個方塊
   holdPiece: Tetromino | null;        // 暫存的方塊
@@ -50,7 +50,8 @@ export interface GameState {
 
 // 遊戲板尺寸常數
 export const BOARD_WIDTH = 10;   // 遊戲板寬度（格數）
-export const BOARD_HEIGHT = 20;  // 遊戲板高度（格數）
+export const BOARD_HEIGHT = 21;  // 遊戲板高度（格數，包含 1 行隱藏層）
+export const VISIBLE_HEIGHT = 20; // 可見的遊戲板高度（玩家看到的部分）
 export const GAME_DURATION = 120; // 遊戲時長：120秒（2分鐘）
 
 /**

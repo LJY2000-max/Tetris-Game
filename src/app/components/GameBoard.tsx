@@ -1,7 +1,7 @@
 // src/components/GameBoard.tsx
 
 import React from 'react';
-import { GameState, COLORS, TetrominoType } from '../types/tetris';
+import { GameState, COLORS, TetrominoType, VISIBLE_HEIGHT } from '../types/tetris';
 import { getGhostPiece } from '../utils/tetris';
 
 /**
@@ -89,6 +89,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, timeRemaining }) => {
     });
   }
 
+  // 只顯示從第 1 行開始的 20 行（隱藏第 0 行的隱藏層）
+  const visibleBoard = displayBoard.slice(1, 1 + VISIBLE_HEIGHT);
+
   return (
     <div className="game-board-container">
       {/* 時間顯示在遊戲板上方 */}
@@ -97,7 +100,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, timeRemaining }) => {
       {/* 遊戲板 */}
       <div className="game-board bg-gray-900 p-2 rounded-lg shadow-2xl">
         <div className="grid grid-cols-10 gap-[2px] bg-gray-700 p-1">
-          {displayBoard.map((row, y) => (
+          {visibleBoard.map((row, y) => (
             row.map((cell, x) => {
               const isGhost = (cell as string) === 'ghost';
               

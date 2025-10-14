@@ -14,7 +14,7 @@ import {
 
 /**
  * 建立一個空的遊戲板
- * @returns 20x10的二維陣列，所有格子都是null（空的）
+ * @returns 21x10的二維陣列（包含1行隱藏層），所有格子都是null（空的）
  */
 export const createEmptyBoard = (): (TetrominoType | null)[][] => {
   return Array.from({ length: BOARD_HEIGHT }, () =>
@@ -98,10 +98,10 @@ export const createTetromino = (type: TetrominoType): Tetromino => {
   return {
     type,
     shape,
-    // 將方塊置中於頂部
+    // 將方塊置中於隱藏層（y = -1）
     position: {
       x: Math.floor(BOARD_WIDTH / 2) - Math.floor(TETROMINOS[type][0].length / 2),
-      y: 0
+      y: 0  // 在隱藏層生成方塊
     },
     rotation: 0
   };
@@ -170,7 +170,7 @@ export const isValidMove = (
           newX < 0 ||                    // 超出左邊界
           newX >= BOARD_WIDTH ||          // 超出右邊界
           newY >= BOARD_HEIGHT ||         // 超出底部
-          (newY >= 0 && board[newY][newX]) // 與現有方塊重疊
+          (newY >= 0 && board[newY][newX]) // 與現有方塊重疊（允許在 y < 0 的隱藏層）
         ) {
           return false;
         }
@@ -199,7 +199,7 @@ export const mergePieceToBoard = (
       if (cell) {
         const boardY = piece.position.y + y;
         const boardX = piece.position.x + x;
-        // 確保不越界
+        // 確保不越界（只寫入可見範圍內的部分）
         if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
           newBoard[boardY][boardX] = piece.type;
         }
