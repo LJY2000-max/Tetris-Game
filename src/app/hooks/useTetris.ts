@@ -110,7 +110,7 @@ export const useTetris = () => {
         return prev;
       }
 
-      console.log('Holding piece:', prev.currentPiece.type);
+      //console.log('Holding piece:', prev.currentPiece.type);
 
       // 如果暫存區是空的
       if (!prev.holdPiece) {

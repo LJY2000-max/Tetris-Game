@@ -265,7 +265,8 @@ export const calculatePoints = (linesCleared: number, ComboNumber: number): numb
       TOTAL_POINTS += CLEAR_POINTS.TETRIS;   // 4分（俄羅斯方塊）
       break;
   }
-
+  if(ComboNumber>0)
+    console.log(`消除 ${linesCleared} 行，${ComboNumber-1} COMBO}`);
   switch (ComboNumber) {
     case 0:
     case 1:
@@ -275,32 +276,32 @@ export const calculatePoints = (linesCleared: number, ComboNumber: number): numb
     case 3:
       TOTAL_POINTS += COMBO_POINTS.COMBO_1to2;
       break;
-    case 3:
     case 4:
+    case 5:
       TOTAL_POINTS += COMBO_POINTS.COMBO_3to4;
       break;
-    case 5:
     case 6:
+    case 7:
       TOTAL_POINTS += COMBO_POINTS.COMBO_5to6;
       break;
-    case 7:
     case 8:
+    case 9:
       TOTAL_POINTS += COMBO_POINTS.COMBO_7to8;
       break;
-    case 9:
     case 10:
+    case 11:
       TOTAL_POINTS += COMBO_POINTS.COMBO_9to10;
       break;
-    case 11:
     case 12:
+    case 13:
       TOTAL_POINTS += COMBO_POINTS.COMBO_11to12;
       break;
-    case 13:
     case 14:
+    case 15:
       TOTAL_POINTS += COMBO_POINTS.COMBO_13to14;
       break;
-    case 15:
     case 16:
+    case 17:
       TOTAL_POINTS += COMBO_POINTS.COMBO_15to16;
       break;
     default:
