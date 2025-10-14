@@ -48,11 +48,120 @@ export const useTetris = () => {
   const gameLoopRef = useRef<number | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
   const gameStateRef = useRef<GameState>(gameState);
+  
+  // Lock Delay 相關的 ref
+  const lockDelayTimerRef = useRef<number | null>(null);
+  const isLockDelayActiveRef = useRef<boolean>(false);
+  const lockDelayDuration = 500; // 0.5 秒的延遲鎖定時間
+  const maxLockResets = 15; // 最大重置次數（防止無限延遲）
+  const lockResetCountRef = useRef<number>(0);
 
   // 保持 ref 和 state 同步
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  /**
+   * 清除 Lock Delay 計時器
+   */
+  const clearLockDelay = useCallback(() => {
+    if (lockDelayTimerRef.current) {
+      clearTimeout(lockDelayTimerRef.current);
+      lockDelayTimerRef.current = null;
+    }
+    isLockDelayActiveRef.current = false;
+    lockResetCountRef.current = 0;
+  }, []);
+
+  /**
+   * 重置 Lock Delay（當方塊移動或旋轉時）
+   */
+  const resetLockDelay = useCallback(() => {
+    const state = gameStateRef.current;
+    if (!state.currentPiece || state.gameOver || state.isPaused) return;
+
+    // 檢查方塊是否在底部
+    const isAtBottom = !isValidMove(
+      state.board,
+      state.currentPiece,
+      { x: state.currentPiece.position.x, y: state.currentPiece.position.y + 1 }
+    );
+
+    if (!isAtBottom) {
+      // 如果不在底部，清除 Lock Delay
+      clearLockDelay();
+      return;
+    }
+
+    // 如果已達到最大重置次數，立即鎖定
+    if (lockResetCountRef.current >= maxLockResets) {
+      clearLockDelay();
+      lockPiece();
+      return;
+    }
+
+    // 增加重置計數
+    lockResetCountRef.current++;
+
+    // 清除舊的計時器
+    if (lockDelayTimerRef.current) {
+      clearTimeout(lockDelayTimerRef.current);
+    }
+
+    // 設置新的 Lock Delay
+    isLockDelayActiveRef.current = true;
+    lockDelayTimerRef.current = window.setTimeout(() => {
+      lockPiece();
+    }, lockDelayDuration);
+  }, [lockDelayDuration, maxLockResets]);
+
+  /**
+   * 鎖定方塊（固定到遊戲板）
+   */
+  const lockPiece = useCallback(() => {
+    setGameState(prev => {
+      if (!prev.currentPiece || prev.gameOver || prev.isPaused) return prev;
+
+      const boardWithPiece = mergePieceToBoard(prev.board, prev.currentPiece);
+      const { board: clearedBoard, linesCleared, ComboNumber, isPerfectClear } = clearLines(boardWithPiece, prev.ComboNumber);
+      
+      const newScore = prev.score + calculatePoints(linesCleared, ComboNumber, isPerfectClear);
+      const newLines = prev.lines + linesCleared;
+      const newLevel = Math.floor(newLines / 10) + 1;
+
+      // 如果是完美消除，在控制台記錄
+      if (isPerfectClear) {
+        console.log('🎉 PERFECT CLEAR! +10 分');
+      }
+
+      // 使用第一個 next 方塊作為新的當前方塊
+      const newCurrentPiece = prev.nextPieces[0];
+      // 移除第一個，並在末尾補充新的方塊
+      const newNextPieces = [
+        ...prev.nextPieces.slice(1),
+        createTetromino(randomTetrominoType())
+      ];
+
+      const gameOver = newCurrentPiece ? 
+        !isValidMove(clearedBoard, newCurrentPiece, newCurrentPiece.position) : false;
+
+      // 清除 Lock Delay
+      clearLockDelay();
+
+      return {
+        ...prev,
+        board: clearedBoard,
+        currentPiece: newCurrentPiece,
+        nextPieces: newNextPieces,
+        score: newScore,
+        lines: newLines,
+        level: newLevel,
+        gameOver,
+        ComboNumber: ComboNumber,
+        canHold: true
+      };
+    });
+  }, [clearLockDelay]);
   
 
   /**
@@ -62,6 +171,9 @@ export const useTetris = () => {
   const startGame = useCallback(() => {
     resetTetrominoBag();
     console.log("StartGame");
+    
+    // 清除所有 Lock Delay
+    clearLockDelay();
     
     // 生成初始的 6 個方塊（1 個當前 + 5 個 next）
     const firstPiece = createTetromino(randomTetrominoType());
@@ -86,14 +198,21 @@ export const useTetris = () => {
 
     // 設定遊戲為運行狀態
     setIsGameRunning(true);
-  }, []);
+  }, [clearLockDelay]);
 
   /**
    * 暫停/繼續遊戲
    */
   const pauseGame = useCallback(() => {
-    setGameState(prev => ({ ...prev, isPaused: !prev.isPaused }));
-  }, []);
+    setGameState(prev => {
+      const newPaused = !prev.isPaused;
+      if (newPaused) {
+        // 暫停時清除 Lock Delay
+        clearLockDelay();
+      }
+      return { ...prev, isPaused: newPaused };
+    });
+  }, [clearLockDelay]);
 
   /**
    * 暫存方塊功能（Hold Piece）
@@ -111,6 +230,9 @@ export const useTetris = () => {
       }
 
       console.log('Holding piece:', prev.currentPiece.type);
+
+      // 清除 Lock Delay
+      clearLockDelay();
 
       // 如果暫存區是空的
       if (!prev.holdPiece) {
@@ -150,7 +272,7 @@ export const useTetris = () => {
         };
       }
     });
-  }, []);
+  }, [clearLockDelay]);
 
   /**
    * 旋轉方塊（左旋）
@@ -162,6 +284,8 @@ export const useTetris = () => {
       const rotated = left_rotatePiece(prev.currentPiece);
       
       if (isValidMove(prev.board, rotated, rotated.position)) {
+        // 旋轉成功，重置 Lock Delay
+        resetLockDelay();
         return { ...prev, currentPiece: rotated };
       }
 
@@ -182,6 +306,8 @@ export const useTetris = () => {
           y: rotated.position.y + kick.y
         };
         if (isValidMove(prev.board, rotated, newPosition)) {
+          // Wall kick 成功，重置 Lock Delay
+          resetLockDelay();
           return {
             ...prev,
             currentPiece: { ...rotated, position: newPosition }
@@ -191,7 +317,7 @@ export const useTetris = () => {
 
       return prev;
     });
-  }, []);
+  }, [resetLockDelay]);
 
   /**
    * 旋轉方塊（右旋）
@@ -203,6 +329,8 @@ export const useTetris = () => {
       const rotated = right_rotatePiece(prev.currentPiece);
       
       if (isValidMove(prev.board, rotated, rotated.position)) {
+        // 旋轉成功，重置 Lock Delay
+        resetLockDelay();
         return { ...prev, currentPiece: rotated };
       }
 
@@ -223,6 +351,8 @@ export const useTetris = () => {
           y: rotated.position.y + kick.y
         };
         if (isValidMove(prev.board, rotated, newPosition)) {
+          // Wall kick 成功，重置 Lock Delay
+          resetLockDelay();
           return {
             ...prev,
             currentPiece: { ...rotated, position: newPosition }
@@ -232,7 +362,7 @@ export const useTetris = () => {
 
       return prev;
     });
-  }, []);
+  }, [resetLockDelay]);
 
   /**
    * 移動方塊
@@ -247,54 +377,43 @@ export const useTetris = () => {
       };
 
       if (isValidMove(prev.board, prev.currentPiece, newPosition)) {
+        // 移動成功
+        const movedPiece = { ...prev.currentPiece, position: newPosition };
+        
+        // 檢查移動後是否在底部
+        const isNowAtBottom = !isValidMove(
+          prev.board,
+          movedPiece,
+          { x: newPosition.x, y: newPosition.y + 1 }
+        );
+        
+        if (isNowAtBottom) {
+          // 到達底部，啟動 Lock Delay
+          resetLockDelay();
+        } else {
+          // 不在底部，清除 Lock Delay
+          clearLockDelay();
+        }
+        
         return {
           ...prev,
-          currentPiece: { ...prev.currentPiece, position: newPosition }
+          currentPiece: movedPiece
         };
       }
 
-      // 如果是向下移動且無法繼續,固定方塊
+      // 如果是向下移動且無法繼續
       if (direction === 'down') {
-        const boardWithPiece = mergePieceToBoard(prev.board, prev.currentPiece);
-        const { board: clearedBoard, linesCleared, ComboNumber, isPerfectClear } = clearLines(boardWithPiece, prev.ComboNumber);
-        
-        const newScore = prev.score + calculatePoints(linesCleared, ComboNumber, isPerfectClear);
-        const newLines = prev.lines + linesCleared;
-        const newLevel = Math.floor(newLines / 10) + 1;
-
-        // 如果是完美消除，在控制台記錄
-        if (isPerfectClear) {
-          console.log('🎉 PERFECT CLEAR! +10 分');
+        // 如果 Lock Delay 未啟動，啟動它
+        if (!isLockDelayActiveRef.current) {
+          resetLockDelay();
         }
-
-        // 使用第一個 next 方塊作為新的當前方塊
-        const newCurrentPiece = prev.nextPieces[0];
-        // 移除第一個，並在末尾補充新的方塊
-        const newNextPieces = [
-          ...prev.nextPieces.slice(1),
-          createTetromino(randomTetrominoType())
-        ];
-
-        const gameOver = newCurrentPiece ? 
-          !isValidMove(clearedBoard, newCurrentPiece, newCurrentPiece.position) : false;
-
-        return {
-          ...prev,
-          board: clearedBoard,
-          currentPiece: newCurrentPiece,
-          nextPieces: newNextPieces,
-          score: newScore,
-          lines: newLines,
-          level: newLevel,
-          gameOver,
-          ComboNumber: ComboNumber,
-          canHold: true
-        };
+        // 不立即鎖定，等待 Lock Delay 計時器
+        return prev;
       }
 
       return prev;
     });
-  }, []);
+  }, [resetLockDelay, clearLockDelay]);
 
   /**
    * 硬降(直接落下)
@@ -328,6 +447,9 @@ export const useTetris = () => {
       const gameOver = newCurrentPiece ? 
         !isValidMove(clearedBoard, newCurrentPiece, newCurrentPiece.position) : false;
 
+      // 硬降時清除 Lock Delay
+      clearLockDelay();
+
       return {
         ...prev,
         board: clearedBoard,
@@ -341,7 +463,7 @@ export const useTetris = () => {
         canHold: true
       };
     });
-  }, []);
+  }, [clearLockDelay]);
 
   /**
    * 監控遊戲結束狀態
@@ -349,8 +471,9 @@ export const useTetris = () => {
   useEffect(() => {
     if (gameState.gameOver) {
       setIsGameRunning(false);
+      clearLockDelay();
     }
-  }, [gameState.gameOver]);
+  }, [gameState.gameOver, clearLockDelay]);
 
   /**
    * 倒數計時器 Effect
@@ -435,41 +558,10 @@ export const useTetris = () => {
         return;
       }
 
-      const boardWithPiece = mergePieceToBoard(currentState.board, currentState.currentPiece);
-      const { board: clearedBoard, linesCleared, ComboNumber, isPerfectClear } = clearLines(boardWithPiece, currentState.ComboNumber);
-      
-      const newScore = currentState.score + calculatePoints(linesCleared, ComboNumber, isPerfectClear);
-      const newLines = currentState.lines + linesCleared;
-      const newLevel = Math.floor(newLines / 10) + 1;
-
-      // 如果是完美消除，在控制台記錄
-      if (isPerfectClear) {
-        console.log('🎉 PERFECT CLEAR! +10 分');
+      // 無法繼續下落，啟動 Lock Delay（如果尚未啟動）
+      if (!isLockDelayActiveRef.current) {
+        resetLockDelay();
       }
-
-      // 使用第一個 next 方塊作為新的當前方塊
-      const newCurrentPiece = currentState.nextPieces[0];
-      // 移除第一個，並在末尾補充新的方塊
-      const newNextPieces = [
-        ...currentState.nextPieces.slice(1),
-        createTetromino(randomTetrominoType())
-      ];
-
-      const gameOver = newCurrentPiece ? 
-        !isValidMove(clearedBoard, newCurrentPiece, newCurrentPiece.position) : false;
-
-      setGameState({
-        ...currentState,
-        board: clearedBoard,
-        currentPiece: newCurrentPiece,
-        nextPieces: newNextPieces,
-        score: newScore,
-        lines: newLines,
-        level: newLevel,
-        gameOver,
-        ComboNumber: ComboNumber,
-        canHold: true
-      });
     }, speed);
 
     return () => {
@@ -478,7 +570,7 @@ export const useTetris = () => {
         gameLoopRef.current = null;
       }
     };
-  }, [gameState.gameOver, gameState.isPaused, gameState.level, gameState.currentPiece ? 'exists' : 'none']);
+  }, [gameState.gameOver, gameState.isPaused, gameState.level, gameState.currentPiece ? 'exists' : 'none', resetLockDelay]);
 
   // 返回遊戲狀態和控制函數
   return {

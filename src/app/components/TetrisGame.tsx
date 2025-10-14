@@ -167,7 +167,7 @@ const TetrisGame: React.FC = () => {
       }
       console.log('Continuous moving down');
       movePieceRef.current('down');
-    }, 75); // 每 50ms 下降一次
+    }, 75); // 每 75ms 下降一次
   }, []);
 
   /**
